@@ -39,8 +39,7 @@ void SetStackSize(int64_t sz) {
   }
 }
 
-template<size_t chunks>
-int HeurComp(const FGraph<chunks>& graph, int best, double time, const Preprocessor& pp) {
+int HeurComp(const FGraph& graph, int best, double time, const Preprocessor& pp) {
   Timer timer;
   timer.start();
   int it=0;
@@ -60,7 +59,7 @@ int HeurComp(const FGraph<chunks>& graph, int best, double time, const Preproces
     it++;
     Timer triang_tmr;
     triang_tmr.start();
-    FGraph<chunks> lol_g = graph;
+    FGraph lol_g = graph;
     mcs::LbTriang(lol_g, gen, vari, upd_cnt);
     triang_tmr.stop();
     double est = (double)gs.size() * (double)it / ((double)it - (double)gs.size());
@@ -75,7 +74,7 @@ int HeurComp(const FGraph<chunks>& graph, int best, double time, const Preproces
     {
       Timer td_tmr;
       td_tmr.start();
-      ChordalSolve<chunks> cs(lol_g);
+      ChordalSolve cs(lol_g);
       int td = cs.Solve(best-1, vari, std::min(time - timer.get(), triang_tmr.get() + 0.01));
       if (td < best) {
         best = td;
@@ -93,12 +92,12 @@ int HeurComp(const FGraph<chunks>& graph, int best, double time, const Preproces
   return best;
 }
 
-template<size_t chunks> int DoSolve2(const SparseGraph& graph, int best, const Preprocessor& pp) {
-  assert(graph.n() <= chunks * BITS && graph.n() > (chunks-1) * BITS);
-  FGraph<chunks> ppg(graph);
+int DoSolve2(const SparseGraph& graph, int best, const Preprocessor& pp) {
+  assert(graph.n() <= BITS);
+  FGraph ppg(graph);
   Log::Write(3, "Solve2 n:", ppg.n(), " m:", ppg.m());
   {
-    MSSolve<chunks> mss(ppg);
+    MSSolve mss(ppg);
     mss.incorrect_msenum_ = true;
     int ans = mss.Solve(best-1, true);
     if (ans < best) {
@@ -115,7 +114,7 @@ template<size_t chunks> int DoSolve2(const SparseGraph& graph, int best, const P
       return best;
     }
   }
-  MSSolve<chunks> mss2(ppg);
+  MSSolve mss2(ppg);
   int ans2 = mss2.Solve(best-1, false);
   if (ans2 < best) {
     best = ans2;
@@ -130,58 +129,27 @@ template<size_t chunks> int DoSolve2(const SparseGraph& graph, int best, const P
   return -1;
 }
 
-template<size_t chunks> void DoSolve1(const SparseGraph& graph, int best, const Preprocessor& pp) {
-  assert(graph.n() <= chunks * BITS && graph.n() > (chunks-1) * BITS);
-  const FGraph<chunks> ppg(graph);
+void DoSolve1(const SparseGraph& graph, int best, const Preprocessor& pp) {
+  assert(graph.n() <= BITS);
+  const FGraph ppg(graph);
   Log::Write(3, "Dosolve1 n:", ppg.n(), " m:", ppg.m());
 
-  // This is variable mostly to reduce the total time
   double pp_time = 40;
-  if (ppg.n() <= 50) {
-    pp_time = 1;
-  } else if (ppg.n() <= 75) {
-    pp_time = 5;
-  } else if (ppg.n() <= 100) {
-    pp_time = 20;
-  } else if (ppg.n() <= 150) {
-    pp_time = 30;
-  } else if (ppg.n() <= 200) {
-    pp_time = 40;
-  } else if (ppg.n() <= 250) {
-    pp_time = 50;
-  } else {
-    pp_time = 60;
-  }
+  if      (ppg.n() <= 50)  pp_time = 1;
+  else if (ppg.n() <= 75)  pp_time = 5;
+  else if (ppg.n() <= 100) pp_time = 20;
+  else if (ppg.n() <= 150) pp_time = 30;
+  else if (ppg.n() <= 200) pp_time = 40;
+  else if (ppg.n() <= 250) pp_time = 50;
+  else                     pp_time = 60;
 
-  best = HeurComp<chunks>(ppg, best, pp_time, pp);
+  best = HeurComp(ppg, best, pp_time, pp);
 
   while (true) {
     Preprocessor pp2 = pp;
     SparseGraph pp_graph = pp2.TamakiRules(SparseGraph(ppg), best-1);
-    int nbest = best;
-    if (pp_graph.n() <= BITS) {
-      nbest = DoSolve2<1>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 2*BITS) {
-      nbest = DoSolve2<2>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 3*BITS) {
-      nbest = DoSolve2<3>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 4*BITS) {
-      nbest = DoSolve2<4>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 5*BITS) {
-      nbest = DoSolve2<5>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 6*BITS) {
-      nbest = DoSolve2<6>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 7*BITS) {
-      nbest = DoSolve2<7>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 8*BITS) {
-      nbest = DoSolve2<8>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 9*BITS) {
-      nbest = DoSolve2<9>(pp_graph, best, pp2);
-    } else if (pp_graph.n() <= 10*BITS) {
-      nbest = DoSolve2<10>(pp_graph, best, pp2);
-    } else { // Assume that the graph has n <= 640
-      assert(0);
-    }
+    assert(pp_graph.n() <= BITS);
+    int nbest = DoSolve2(pp_graph, best, pp2);
     if (nbest == -1) return;
     assert(nbest >= 0 && nbest < best);
     best = nbest;
@@ -190,14 +158,13 @@ template<size_t chunks> void DoSolve1(const SparseGraph& graph, int best, const 
 }
 
 int main() {
-  // Set stack size equal to the memory limit (8GB).
   SetStackSize(8ll * 1024 * 1024);
-  // Should be 3 in the final submission. 5 is reasonable, 10 prints a lot.
   Log::SetLogLevel(3);
   Io io;
   SparseGraph graph = io.ReadGraph(std::cin);
 
   Log::Write(3, "Input n:", graph.n(), " m:", graph.m());
+  assert(graph.n() <= BITS);
   best::InitBest(graph);
   assert(graph.IsConnected());
   int best = graph.n();
@@ -205,28 +172,7 @@ int main() {
   Preprocessor pp;
   SparseGraph pp_graph = pp.Preprocess(graph);
 
-  if (pp_graph.n() <= BITS) {
-    DoSolve1<1>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 2*BITS) {
-    DoSolve1<2>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 3*BITS) {
-    DoSolve1<3>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 4*BITS) {
-    DoSolve1<4>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 5*BITS) {
-    DoSolve1<5>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 6*BITS) {
-    DoSolve1<6>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 7*BITS) {
-    DoSolve1<7>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 8*BITS) {
-    DoSolve1<8>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 9*BITS) {
-    DoSolve1<9>(pp_graph, best, pp);
-  } else if (pp_graph.n() <= 10*BITS) {
-    DoSolve1<10>(pp_graph, best, pp);
-  } else { // Assume that the graph has n <= 640
-    assert(0);
-  }
+  assert(pp_graph.n() <= BITS);
+  DoSolve1(pp_graph, best, pp);
   best::PrintBest();
 }

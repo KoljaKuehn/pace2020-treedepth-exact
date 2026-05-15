@@ -44,8 +44,7 @@ class Log {
   template<typename T>
   static void WriteImpl(std::pair<T, T> message);
 
-  template<size_t chunks>
-  static void WriteImpl(FBitset<chunks> message);
+  static void WriteImpl(FBitset message);
   
   template<typename T>
   static void WriteImpl(T message);
@@ -161,10 +160,9 @@ inline void Log::WriteImpl(std::vector<T> message) {
   }
   std::cerr<<"}";
 }
-template<size_t chunks>
-inline void Log::WriteImpl(FBitset<chunks> b) {
+inline void Log::WriteImpl(FBitset b) {
   std::cerr<<"{";
-  for (size_t i=0;i<chunks*BITS;i++){
+  for (size_t i=0;i<BITS;i++){
     std::cerr<<b.Get(i);
   }
   std::cerr<<"}";
