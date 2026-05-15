@@ -60,7 +60,7 @@ int CycleLb(int length) {
   uint32_t x = length;
   return 33 - __builtin_clz(x-1);
 }
-std::vector<int> path_cycle_found;
+thread_local std::vector<int> path_cycle_found;
 void pclbdfs(const SparseGraph& graph, int x, std::vector<int>& d, int& lb, std::vector<int>& pt) {
   assert(d[x] > 0);
   if (PathLb(d[x]) > lb) {
@@ -91,7 +91,7 @@ void pclbdfs(const SparseGraph& graph, int x, std::vector<int>& d, int& lb, std:
   }
 }
 
-std::mt19937 gener(1337);
+thread_local std::mt19937 gener(1337);
 
 int PathCycleLb(SparseGraph graph, int rounds, int goal) {
   int lb = goal - 1;
@@ -297,7 +297,7 @@ inline bool MSSolve::Reco(FBitset vert, int k, const vector<Edge>& parent_edges)
   assert(false);
 }
 
-Timer isomt;
+inline thread_local Timer isomt;
 
 inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
   isomt.start();
@@ -347,15 +347,15 @@ inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
   return true;
 }
 
-Timer mst1,mst2,mst3,subt,tott,isot,lbt;
+inline thread_local Timer mst1,mst2,mst3,subt,tott,isot,lbt;
 
-uint64_t recs = 0;
-uint64_t recs2 = 0;
-uint64_t iso_tp = 0;
-uint64_t iso_fp = 0;
+inline thread_local uint64_t recs = 0;
+inline thread_local uint64_t recs2 = 0;
+inline thread_local uint64_t iso_tp = 0;
+inline thread_local uint64_t iso_fp = 0;
 
-Timer startim;
-double lastprint = 0;
+inline thread_local Timer startim;
+inline thread_local double lastprint = 0;
 
 inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
                          const vector<FBitset>& parent_minseps, int parent_n, bool can_induce_seps) {

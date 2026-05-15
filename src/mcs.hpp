@@ -15,9 +15,9 @@ std::vector<FBitset> ChordalMinseps(const FGraph& graph);
 
 inline std::vector<int> Mcs(const FGraph& graph) {
   std::vector<int> order(graph.n());
-  static std::vector<int> label;
-  static std::vector<char> rm;
-  static std::vector<std::vector<int> > labels;
+  static thread_local std::vector<int> label;
+  static thread_local std::vector<char> rm;
+  static thread_local std::vector<std::vector<int> > labels;
   utils::InitZero(label, graph.n());
   utils::InitZero(rm, graph.n());
   if (labels.size() < (size_t)graph.n()) labels.resize(graph.n());
