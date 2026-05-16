@@ -4,7 +4,7 @@
 #include <cassert>
 
 namespace sms {
-int Log::log_level_ = 10000;
+int Log::log_level_ = 0;
 void Log::SetLogLevel(int lvl) {
   log_level_ = lvl;
 }
