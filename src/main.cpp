@@ -1,27 +1,27 @@
-#include <cassert>
+#include <iostream>
+#include <exception>
+#include <string>
 
-#include "graph.hpp"
-#include "utils.hpp"
-#include "bitset.hpp"
-#include "preprocessor.hpp"
-#include "ms_solve.hpp"
+#include "io.hpp"
+#include "solve.hpp"
 
-using namespace sms;
-
-// Returns true iff the treedepth of graph is at most k.
-// The graph must have at most BITS (64) vertices.
-bool SolveDecision(const SparseGraph& graph, int k) {
-  assert(graph.n() <= BITS);
-  Preprocessor pp;
-  SparseGraph pp_graph = pp.Preprocess(graph);
-  if (pp_graph.n() == 0) return true;
-  assert(pp_graph.n() <= BITS);
-  Preprocessor pp2 = pp;
-  SparseGraph pp_graph2 = pp2.TamakiRules(pp_graph, k);
-  if (pp_graph2.n() == 0) return true;
-  assert(pp_graph2.n() <= BITS);
-  FGraph fg(pp_graph2);
-  MSSolve mss(fg);
-  int result = mss.Solve(k, true);
-  return result <= k;
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " <k>\n"
+              << "Reads a graph in PACE tdp format from stdin.\n"
+              << "Exits 0 if td(G) <= k, 1 otherwise.\n";
+    return 2;
+  }
+  int k;
+  try {
+    k = std::stoi(argv[1]);
+  } catch (const std::exception&) {
+    std::cerr << "Error: k must be an integer, got: " << argv[1] << "\n";
+    return 2;
+  }
+  sms::Io io;
+  sms::SparseGraph graph = io.ReadGraph(std::cin);
+  const bool result = SolveDecision(graph, k);
+  std::cout << (result ? "true" : "false") << "\n";
+  return result ? 0 : 1;
 }
