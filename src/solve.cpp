@@ -8,10 +8,8 @@
 
 using namespace sms;
 
-// Returns true iff the treedepth of graph is at most k.
-// The graph must have at most BITS (64) vertices.
-bool SolveDecision(const SparseGraph& graph, int k) {
-  assert(graph.n() <= BITS);
+// Connected case: apply preprocessing and solve.
+static bool SolveDecisionConnected(const SparseGraph& graph, int k) {
   Preprocessor pp;
   SparseGraph pp_graph = pp.Preprocess(graph);
   if (pp_graph.n() == 0) return true;
@@ -24,4 +22,32 @@ bool SolveDecision(const SparseGraph& graph, int k) {
   MSSolve mss(fg);
   int result = mss.Solve(k, true);
   return result <= k;
+}
+
+// Returns true iff the treedepth of graph is at most k.
+// The graph must have at most BITS (64) vertices.
+bool SolveDecision(const SparseGraph& graph, int k) {
+  assert(graph.n() <= BITS);
+
+  // td(G) = max over connected components, so solve each independently.
+  const auto components = graph.Components({});
+  if ((int)components.size() > 1) {
+    for (const auto& comp_verts : components) {
+      // Re-index component vertices to 0..size-1 and build a subgraph.
+      std::vector<int> old_to_new(graph.n(), -1);
+      int idx = 0;
+      for (int v : comp_verts) old_to_new[v] = idx++;
+      SparseGraph comp((int)comp_verts.size());
+      for (int v : comp_verts) {
+        for (int u : graph.Neighbors(v)) {
+          if (old_to_new[v] < old_to_new[u])
+            comp.AddEdge(old_to_new[v], old_to_new[u]);
+        }
+      }
+      if (!SolveDecision(comp, k)) return false;
+    }
+    return true;
+  }
+
+  return SolveDecisionConnected(graph, k);
 }
