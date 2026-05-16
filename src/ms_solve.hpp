@@ -304,7 +304,6 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     assert(star_minseps.size() == 1 && star_minseps[0].Popcount() <= k-2);
     FBitset vv = vert; vv.TurnOff(star_minseps[0]);
     for (const auto& comp : t_graph.BitComps(vv)) assert(t_graph.IsStar(comp));
-    Log::Write(5, "FOUND STAR");
     pcs_[pc_id].ub = star_minseps[0].Popcount() + 2;
     return true;
   }
@@ -371,7 +370,6 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     t_minseps.resize(tms_sort.size());
     for (int i = 0; i < (int)tms_sort.size(); i++) t_minseps[i] = std::get<2>(tms_sort[i]);
     t_minseps.erase(std::unique(t_minseps.begin(), t_minseps.end()), t_minseps.end());
-    if (n == graph_.n()) Log::Write(5, "msenum root ", t_minseps.size());
   }
 
   int max_sep_size = std::min(n - 2, k - 3);

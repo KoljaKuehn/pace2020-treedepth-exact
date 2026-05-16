@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
@@ -24,38 +23,12 @@ template<typename T>
 T GetRand(T a, T b, std::mt19937& gen);
 } // namespace utils
 
-class Log {
- public:
-  template<typename T, typename... Args>
-  static void P(T first_message, Args... message);
-  
-  template<typename T>
-  static void Write(int lvl, T message);
-
-  template<typename T, typename... Args>
-  static void Write(int lvl, T first_message, Args... message);
-
-  static void SetLogLevel(int lvl);
- private:
-  template<typename T>
-  static void WriteImpl(std::vector<T> message);
-
-  template<typename T>
-  static void WriteImpl(std::pair<T, T> message);
-
-  static void WriteImpl(FBitset message);
-  
-  template<typename T>
-  static void WriteImpl(T message);
-  static int log_level_;
-};
-
 class PolyHash {
  private:
   uint64_t val_;
  public:
   PolyHash() {
-    val_ = 0;  
+    val_ = 0;
   }
   void Add(uint64_t n) {
     n %= 1000000007;
@@ -103,70 +76,4 @@ inline int GetU(int x, std::vector<int>& un) {
   }
 }
 } // namespace utils
-
-template<typename T>
-void Log::WriteImpl(T message) {
-  std::cerr<<message;
-}
-template<>
-inline void Log::WriteImpl(std::vector<char> message) {
-  std::cerr<<"{ ";
-  for (char e : message) {
-    std::cerr<<(int)e<<" ";
-  }
-  std::cerr<<"}";
-}
-template<>
-inline void Log::WriteImpl(std::vector<int> message) {
-  std::cerr<<"{";
-  for (int i=0;i<(int)message.size();i++){
-    std::cerr<<message[i];
-    if (i+1<(int)message.size()) {
-      std::cerr<<", ";
-    }
-  }
-  std::cerr<<"}";
-}
-template<typename T>
-inline void Log::WriteImpl(std::pair<T, T> message) {
-  std::cerr<<"{";
-  WriteImpl(message.first);
-  std::cerr<<", ";
-  WriteImpl(message.second);
-  std::cerr<<"}";
-}
-template<typename T>
-inline void Log::WriteImpl(std::vector<T> message) {
-  std::cerr<<"{";
-  for (int i=0;i<(int)message.size();i++){
-    WriteImpl(message[i]);
-    if (i+1<(int)message.size()) {
-      std::cerr<<", ";
-    }
-  }
-  std::cerr<<"}";
-}
-inline void Log::WriteImpl(FBitset b) {
-  std::cerr<<"{";
-  for (size_t i=0;i<BITS;i++){
-    std::cerr<<b.Get(i);
-  }
-  std::cerr<<"}";
-}
-template<typename T>
-void Log::Write(int lvl, T message) {
-  if (lvl > log_level_) return;
-  WriteImpl(message);
-  std::cerr<<std::endl;
-}
-template<typename T, typename... Args>
-void Log::Write(int lvl, T first_message, Args... message) {
-  if (lvl > log_level_) return;
-  WriteImpl(first_message);
-  Write(lvl, message...);
-}
-template<typename T, typename... Args>
-void Log::P(T first_message, Args... message) {
-  Write(0, first_message, message...);
-}
 } // namespace sms

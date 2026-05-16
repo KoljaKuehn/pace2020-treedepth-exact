@@ -256,7 +256,6 @@ SparseGraph Preprocessor::TamakiRules(SparseGraph graph, int k) {
         if (graph.HasEdge(x, y)) continue;
         if (graph.Mincut(x, y) >= k) {
           graph.AddEdge(x, y);
-          Log::Write(3, "cutrule ", x, " ", y);
           fo = true;
         }
       }
@@ -283,7 +282,6 @@ SparseGraph Preprocessor::TamakiRules(SparseGraph graph, int k) {
       }
       if (ok) {
         fo = true;
-        Log::Write(3, "tamakirule ", x, " ", graph.Degree(x));
         auto nbs = graph.Neighbors(x);
         tamaki_elim_.push_back({x, nbs});
         for (int y : nbs) {

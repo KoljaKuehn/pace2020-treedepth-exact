@@ -9,7 +9,6 @@ add_library(td_exact STATIC
         io.cpp
         preprocessor.cpp
         solve.cpp
-        utils.cpp
 )
 target_include_directories(td_exact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

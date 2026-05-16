@@ -228,7 +228,6 @@ inline std::vector<FBitset> FGraph::SmallMinsepsHeuristic(int sz) const {
     if (!Neighbors(i).empty()) mask.SetTrue(i);
   }
   for (int i = 0; i < (int)minseps.size(); i++) {
-    if (i > 0 && i%1000000 == 0) Log::Write(5, "F enum minseps ", i, " ", minseps.size());
     const FBitset tsep = minseps[i];
     for (int j : tsep) {
       FBitset block = minseps[i];
@@ -512,7 +511,6 @@ inline std::vector<FBitset> FGraph::StarMinsep(int sz) const {
       if (ff.Insert(nbs)) minseps.push_back(nbs);
     }
     for (int it = 0; it < (int)minseps.size(); it++) {
-      if (it > 0 && it%1000 == 0) Log::Write(5, "star minseps ", it, " ", minseps.size());
       FBitset tsep = minseps[it];
       FBitset vv = mask;
       vv.TurnOff(tsep);
@@ -650,11 +648,6 @@ inline std::vector<FBitset> NibbleSmallMinseps(FGraph graph, int sz) {
     }
   }
   if (vert.Popcount() <= 2) return {};
-  bool wl = false;
-  if (vert.Popcount() == graph.n()) {
-    Log::Write(5, "nibbleseps ", sz);
-    wl = true;
-  }
   assert(mfv < graph.n() && mfi < graph.n() * graph.n());
   std::vector<FBitset> minseps;
   for (int a : graph.Neighbors(mfv)) {
@@ -685,7 +678,6 @@ inline std::vector<FBitset> NibbleSmallMinseps(FGraph graph, int sz) {
     for (const auto& sep : rms) minseps.push_back(sep);
   }
   utils::SortAndDedup(minseps);
-  if (wl) Log::Write(5, "nibbleseps ret ", minseps.size());
   return minseps;
 }
 
