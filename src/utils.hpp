@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
-#include <chrono>
 #include <queue>
 #include <random>
 
@@ -49,19 +48,6 @@ class Log {
   template<typename T>
   static void WriteImpl(T message);
   static int log_level_;
-};
-
-class Timer {
- private:
-  bool timing;
-  std::chrono::duration<double> elapsedTime;
-  std::chrono::time_point<std::chrono::steady_clock> startTime;
- public:
-  Timer();
-  void start();
-  void stop();
-  void clear();
-  double get();
 };
 
 class PolyHash {

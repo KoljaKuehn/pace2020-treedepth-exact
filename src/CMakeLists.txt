@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 
 add_compile_options(-O3 -flto -Wall -Wextra -Wshadow -g -Wfatal-errors -Wno-sign-compare -Wno-literal-suffix -fPIC -march=native)
 add_library(td_exact STATIC
-        best.cpp
         graph.cpp
         io.cpp
         preprocessor.cpp

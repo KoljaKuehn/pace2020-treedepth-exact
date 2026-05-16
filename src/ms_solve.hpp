@@ -26,17 +26,14 @@ struct MsPiece {
 class MSSolve {
  public:
   MSSolve(const FGraph& graph);
-  int Solve(int goal, bool reti);
-  std::vector<int> Get(int goal);
+  bool Solve(int k);
 
-  bool incorrect_msenum_ = false;
   std::map<uint64_t, std::vector<FBitset>> isom_map_;
 
  private:
   int PieceId(const FBitset& piece, bool insert, bool expect);
   int MsPieceId(const FBitset& piece, bool insert, bool expect);
   FGraph graph_;
-  std::vector<int> resu_;
   std::vector<Piece> pcs_;
   std::vector<MsPiece> ms_pcs_;
   FBitsetMap bs_cac_;
@@ -44,7 +41,6 @@ class MSSolve {
   FLBSieve lb_sieve_;
   bool Go(FBitset vert, int k, const std::vector<Edge>& parent_edges,
           const std::vector<FBitset>& parent_minseps, int parent_n, bool can_induce_seps);
-  bool Reco(FBitset vert, int k, const std::vector<Edge>& parent_edges);
   bool Isom(const FBitset& v1, const FBitset& v2) const;
 };
 
@@ -202,105 +198,7 @@ inline int MSSolve::MsPieceId(const FBitset& piece, bool insert, bool expect) {
   }
 }
 
-inline bool MSSolve::Reco(FBitset vert, int k, const vector<Edge>& parent_edges) {
-  int pc_id = bs_cac_.Get(vert, true);
-  assert(pcs_[pc_id].ub <= k);
-  k = pcs_[pc_id].ub;
-  int n = vert.Popcount();
-  if (n <= k) {
-    for (int v : vert) { assert(k >= 1); resu_[v] = k--; }
-    return true;
-  }
-  FGraph t_graph(graph_.n());
-  std::vector<Edge> tg_edges;
-  if (parent_edges.empty()) {
-    for (auto e : graph_.Edges()) {
-      if (vert.Get(e.F) && vert.Get(e.S)) { t_graph.AddEdge(e); tg_edges.push_back(e); }
-    }
-  } else {
-    for (auto e : parent_edges) {
-      if (vert.Get(e.F) && vert.Get(e.S)) { t_graph.AddEdge(e); tg_edges.push_back(e); }
-    }
-  }
-  assert(t_graph.m() < n*(n-1)/2);
-  if (k == n-1) {
-    for (int u : vert) {
-      for (int v : vert) {
-        if (u != v && !t_graph.HasEdge(u, v)) {
-          resu_[u] = 1; resu_[v] = 1;
-          vert.SetFalse(u); vert.SetFalse(v);
-          for (int w : vert) { assert(k >= 2); resu_[w] = k--; }
-          return true;
-        }
-      }
-    }
-  }
-  assert(k <= n-2);
-  assert(n >= 4 && t_graph.m() >= 3);
-
-  for (int v : vert) {
-    if (t_graph.Degree(v) < k) {
-      FBitset cover = t_graph.adj_mat2_[v]; cover.SetFalse(v);
-      bool isvc = true;
-      for (auto e : tg_edges) {
-        if (!cover.Get(e.F) && !cover.Get(e.S)) { isvc = false; break; }
-      }
-      if (isvc) {
-        for (int u : vert) resu_[u] = 1;
-        for (int u : cover) { assert(k >= 2); resu_[u] = k--; }
-        return true;
-      }
-    }
-  }
-
-  std::vector<FBitset> star_minseps = t_graph.StarMinsep(k-2);
-  if (!star_minseps.empty()) {
-    assert(star_minseps.size() == 1);
-    assert(star_minseps[0].Popcount() <= k-2);
-    FBitset vis = vert; vis.TurnOff(star_minseps[0]);
-    for (const auto& comp : t_graph.BitComps(vis)) {
-      assert(t_graph.IsStar(comp));
-      if (comp.Popcount() == 2) {
-        int t = 2;
-        for (int v : comp) { resu_[v] = t--; }
-        assert(t == 0);
-      } else {
-        for (int v : comp) {
-          resu_[v] = (comp.IntersectionPopcount(t_graph.adj_mat2_[v]) > 2) ? 2 : 1;
-        }
-      }
-    }
-    for (int v : star_minseps[0]) { assert(k >= 3); resu_[v] = k--; }
-    return true;
-  }
-  int ms_pc_id = MsPieceId(vert, false, true);
-  for (const FBitset& ms : ms_pcs_[ms_pc_id].minseps) {
-    if (ms.Popcount() >= k-1) continue;
-    vert.TurnOff(ms);
-    auto bcs = t_graph.BitComps(vert);
-    vert |= ms;
-    assert(bcs.size() >= 2);
-    auto cmp = [](const FBitset& a, const FBitset& b) { return a.Popcount() > b.Popcount(); };
-    std::sort(bcs.begin(), bcs.end(), cmp);
-    bool ok = true;
-    for (const FBitset& bc : bcs) {
-      size_t bcid = bs_cac_.Get(bc, false);
-      if (bcid == 0) { ok = false; break; }
-      if (pcs_[bcid].ub > k - ms.Popcount()) { ok = false; break; }
-    }
-    if (ok) {
-      for (const FBitset& bc : bcs) assert(Reco(bc, k - ms.Popcount(), tg_edges));
-      for (int v : ms) { assert(k >= 1); resu_[v] = k--; }
-      return true;
-    }
-  }
-  assert(false);
-}
-
-inline thread_local Timer isomt;
-
 inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
-  isomt.start();
   std::vector<uint64_t> l1, l2;
   l1 = graph_.RefinedLabels(v1);
   l2 = graph_.RefinedLabels(v2);
@@ -316,7 +214,7 @@ inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
   std::sort(lp2.begin(), lp2.end());
   std::vector<int> m1(graph_.n()), m2(graph_.n());
   for (int i = 0; i < graph_.n(); i++) {
-    if (lp1[i].F != lp2[i].F) { isomt.stop(); return false; }
+    if (lp1[i].F != lp2[i].F) return false;
     m1[lp1[i].S] = lp2[i].S;
     m2[lp2[i].S] = lp1[i].S;
   }
@@ -325,7 +223,7 @@ inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
       for (int ni : graph_.Neighbors(i)) {
         if (v1.Get(ni)) {
           if (!graph_.HasEdge(m1[i], m1[ni]) || !v2.Get(m1[i]) || !v2.Get(m1[ni])) {
-            isomt.stop(); return false;
+            return false;
           }
         }
       }
@@ -336,31 +234,18 @@ inline bool MSSolve::Isom(const FBitset& v1, const FBitset& v2) const {
       for (int ni : graph_.Neighbors(i)) {
         if (v2.Get(ni)) {
           if (!graph_.HasEdge(m2[i], m2[ni]) || !v1.Get(m2[i]) || !v1.Get(m2[ni])) {
-            isomt.stop(); return false;
+            return false;
           }
         }
       }
     }
   }
   assert(v1.Popcount() == v2.Popcount());
-  isomt.stop();
   return true;
 }
 
-inline thread_local Timer mst1,mst2,mst3,subt,tott,isot,lbt;
-
-inline thread_local uint64_t recs = 0;
-inline thread_local uint64_t recs2 = 0;
-inline thread_local uint64_t iso_tp = 0;
-inline thread_local uint64_t iso_fp = 0;
-
-inline thread_local Timer startim;
-inline thread_local double lastprint = 0;
-
 inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
                          const vector<FBitset>& parent_minseps, int parent_n, bool can_induce_seps) {
-  recs++;
-  tott.start();
   int pc_id = PieceId(vert, true, false);
   int n = vert.Popcount();
   if (n == 1) pcs_[pc_id].lb = 1;
@@ -369,7 +254,6 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
   pcs_[pc_id].ub = min(pcs_[pc_id].ub, n);
   if (pcs_[pc_id].ub <= k) return true;
 
-  lbt.start();
   FGraph t_graph(graph_.n());
   std::vector<Edge> tg_edges;
   for (auto e : parent_edges) {
@@ -377,24 +261,24 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
   }
 
   if ((int64_t)t_graph.m() == (int64_t)n*(n-1)/2) {
-    pcs_[pc_id].ub = n; pcs_[pc_id].lb = n; lbt.stop(); return false;
+    pcs_[pc_id].ub = n; pcs_[pc_id].lb = n; return false;
   } else {
     assert((int64_t)t_graph.m() < (int64_t)n*(n-1)/2);
     pcs_[pc_id].ub = min(pcs_[pc_id].ub, n - 1);
-    if (pcs_[pc_id].ub <= k) { lbt.stop(); return true; }
+    if (pcs_[pc_id].ub <= k) return true;
   }
 
   int mmdp = MMDP(t_graph);
   pcs_[pc_id].lb = max(pcs_[pc_id].lb, 1 + mmdp);
-  if (pcs_[pc_id].lb > k) { lbt.stop(); return false; }
+  if (pcs_[pc_id].lb > k) return false;
   if (CycleLb(n) > k) {
     int lb = PathCycleLb(SparseGraph(t_graph), (CycleLb(n)-k)*CycleLb(n), k+1);
     pcs_[pc_id].lb = max(pcs_[pc_id].lb, lb);
     if (pcs_[pc_id].lb > k) {
       FBitset sg;
       for (int v : path_cycle_found) sg.SetTrue(v);
-      subt.start(); lb_sieve_.Insert(sg, pcs_[pc_id].lb); subt.stop();
-      lbt.stop(); return false;
+      lb_sieve_.Insert(sg, pcs_[pc_id].lb);
+      return false;
     }
   }
   assert(n >= 4 && t_graph.m() >= 3);
@@ -410,14 +294,12 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
       if (isvc) {
         pcs_[pc_id].ub = t_graph.Degree(v)+1;
         assert(pcs_[pc_id].ub <= k);
-        lbt.stop(); return true;
+        return true;
       }
     }
   }
 
-  startim.start();
   std::vector<FBitset> star_minseps = t_graph.StarMinsep(k-2);
-  startim.stop();
   if (!star_minseps.empty()) {
     assert(star_minseps.size() == 1 && star_minseps[0].Popcount() <= k-2);
     FBitset vv = vert; vv.TurnOff(star_minseps[0]);
@@ -426,49 +308,34 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     pcs_[pc_id].ub = star_minseps[0].Popcount() + 2;
     return true;
   }
-  lbt.stop();
 
   if (n >= graph_.n() - graph_.n()/3) {
-    isot.start();
     uint64_t isohash = graph_.Hash2(vert);
     if (isom_map_[isohash].empty()) {
       isom_map_[isohash].push_back(vert);
     } else {
       for (const FBitset& vs : isom_map_[isohash]) {
         if (Isom(vert, vs)) {
-          iso_tp++;
           pcs_[pc_id].lb = max(pcs_[pc_id].lb, pcs_[PieceId(vs, false, true)].lb);
           if (pcs_[pc_id].lb > k) {
             lb_sieve_.Insert(vert, pcs_[pc_id].lb);
-            isot.stop(); return false;
+            return false;
           }
-        } else {
-          iso_fp++;
         }
       }
       isom_map_[isohash].push_back(vert);
     }
-    isot.stop();
   }
 
-  recs2++;
   std::vector<FBitset> t_minseps;
   {
     std::vector<std::tuple<int, int, FBitset>> tms_sort;
     int enum_sz = k-3;
-    if (incorrect_msenum_) {
-      if      (k >= 17) enum_sz = k-7;
-      else if (k >= 14) enum_sz = k-6;
-      else if (k >= 11) enum_sz = k-5;
-      else if (k >=  8) enum_sz = k-4;
-    }
     bool do1 = false;
     if (n < graph_.n() && can_induce_seps) {
-      if (incorrect_msenum_) { if (n > parent_n - parent_n/5) do1 = true; }
-      else                   { if (n > parent_n/2)            do1 = true; }
+      if (n > parent_n/2) do1 = true;
     }
     if (do1) {
-      mst1.start();
       for (const auto& pms : parent_minseps) {
         int sep_size = vert.IntersectionPopcount(pms);
         if (sep_size == 0 || sep_size > enum_sz) continue;
@@ -488,18 +355,13 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
         if (fcs < 2) continue;
         tms_sort.push_back(std::make_tuple(comp_size, sep_size, vert4));
       }
-      mst1.stop();
     } else {
-      mst2.start();
-      if (incorrect_msenum_) t_minseps = t_graph.SmallMinsepsHeuristic(enum_sz);
-      else                   t_minseps = NibbleSmallMinseps(t_graph, enum_sz);
+      t_minseps = NibbleSmallMinseps(t_graph, enum_sz);
       tms_sort.resize(t_minseps.size());
       for (int i = 0; i < (int)t_minseps.size(); i++) {
         tms_sort[i] = std::make_tuple(t_graph.MaxCompSize(t_minseps[i], vert), t_minseps[i].Popcount(), t_minseps[i]);
       }
-      mst2.stop();
     }
-    mst3.start();
     auto cmp = [&](const std::tuple<int, int, FBitset>& a, const std::tuple<int, int, FBitset>& b) {
       if (std::get<0>(a) != std::get<0>(b)) return std::get<0>(a) < std::get<0>(b);
       if (std::get<1>(a) != std::get<1>(b)) return std::get<1>(a) < std::get<1>(b);
@@ -509,7 +371,6 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     t_minseps.resize(tms_sort.size());
     for (int i = 0; i < (int)tms_sort.size(); i++) t_minseps[i] = std::get<2>(tms_sort[i]);
     t_minseps.erase(std::unique(t_minseps.begin(), t_minseps.end()), t_minseps.end());
-    mst3.stop();
     if (n == graph_.n()) Log::Write(5, "msenum root ", t_minseps.size());
   }
 
@@ -531,16 +392,12 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     lb_sieve_.Insert(vert, pcs_[pc_id].lb);
     return false;
   }
-  int it = 0;
   for (const FBitset& ms : t_minseps) {
-    it++;
     if (ms.Popcount() > max_sep_size) continue;
     assert(vert.Subsumes(ms));
 
     vert.TurnOff(ms);
-    subt.start();
-    if (lb_sieve_.Get(vert, k-ms.Popcount()+1)) { vert |= ms; subt.stop(); continue; }
-    subt.stop();
+    if (lb_sieve_.Get(vert, k-ms.Popcount()+1)) { vert |= ms; continue; }
     auto bcs = t_graph.BitComps(vert);
     vert |= ms;
 
@@ -550,14 +407,6 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     bool ok = true;
     int tans = 0;
     for (const FBitset& bc : bcs) {
-      if (tott.get() > lastprint + 5) {
-        lastprint = tott.get();
-        Log::Write(5, "rec ", n, " ", k, " ", ms.Popcount(), " ", bc.Popcount(), " ",
-                   mst1.get(), ",", mst2.get(), ",", mst3.get(), "/", tott.get(),
-                   " sub:", subt.get(), " lbt:", lbt.get(), " it:", it, "/", lb_sieve_.TotElements(),
-                   " pcs:", pcs_.size(), " iso:", iso_tp, "/", iso_fp, " ", isot.get(), " ", isomt.get(),
-                   " star:", startim.get(), " bsbs:", bs_cac_.ContainerSize());
-      }
       bool rec_induce = (t_graph.Neighbors(bc) == ms);
       if (!Go(bc, k - ms.Popcount(), tg_edges, t_minseps, n, rec_induce)) { ok = false; break; }
       else tans = max(tans, ms.Popcount() + pcs_[PieceId(bc, false, true)].ub);
@@ -571,39 +420,15 @@ inline bool MSSolve::Go(FBitset vert, int k, const vector<Edge>& parent_edges,
     }
   }
   pcs_[pc_id].lb = k+1;
-  subt.start(); lb_sieve_.Insert(vert, pcs_[pc_id].lb); subt.stop();
+  lb_sieve_.Insert(vert, pcs_[pc_id].lb);
   assert(pcs_[pc_id].lb <= pcs_[pc_id].ub);
   return false;
 }
 
-inline int MSSolve::Solve(int goal, bool reti) {
+inline bool MSSolve::Solve(int k) {
   FBitset vert;
   vert.FillUpTo(graph_.n());
-  const auto graph_edges = graph_.Edges();
-  for (int k = goal; k >= 0; k--) {
-    Log::Write(3, "solving... ", k);
-    if (!Go(vert, k, graph_edges, {}, graph_.n(), false)) {
-      Log::Write(3, "times ", subt.get(), " ", mst1.get(), " ", mst2.get(), " ", mst3.get(), " ", isot.get(), " ", tott.get());
-      Log::Write(3, "recs ", recs, " ", recs2);
-      return k+1;
-    } else {
-      resu_.resize(graph_.n());
-      Timer recot; recot.start();
-      assert(Reco(vert, k, {}));
-      Log::Write(5, "recot ", recot.get());
-      for (int i = 0; i < graph_.n(); i++) {
-        resu_[i]--;
-        assert(resu_[i] >= 0 && resu_[i] < k);
-      }
-      if (reti) { Log::Write(5, "reti ", tott.get()); return k; }
-    }
-  }
-  assert(0);
-}
-
-inline vector<int> MSSolve::Get(int goal) {
-  for (int i = 0; i < graph_.n(); i++) assert(resu_[i] >= 0 && resu_[i] < goal);
-  return resu_;
+  return Go(vert, k, graph_.Edges(), {}, graph_.n(), false);
 }
 
 } // namespace sms

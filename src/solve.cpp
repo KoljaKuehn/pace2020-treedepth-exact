@@ -20,8 +20,7 @@ static bool SolveDecisionConnected(const SparseGraph& graph, int k) {
   assert(pp_graph2.n() <= BITS);
   FGraph fg(pp_graph2);
   MSSolve mss(fg);
-  int result = mss.Solve(k, true);
-  return result <= k;
+  return mss.Solve(k);
 }
 
 // Returns true iff the treedepth of graph is at most k.
