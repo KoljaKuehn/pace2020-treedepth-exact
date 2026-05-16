@@ -16,7 +16,6 @@ class StaticSet {
   int Rank(T value) const;
   T Kth(int k) const;
   int Size() const;
-  std::vector<T> Values() const;
  private:
   std::vector<T> values_;
 };
@@ -63,10 +62,5 @@ T StaticSet<T>::Kth(int k) const {
 template<typename T>
 int StaticSet<T>::Size() const {
   return values_.size();
-}
-
-template<typename T>
-std::vector<T> StaticSet<T>::Values() const {
-  return values_;
 }
 } // namespace sms

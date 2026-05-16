@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <ostream>
 #include <set>
 #include <queue>
 
@@ -29,22 +28,17 @@ class SparseGraph {
 
   void AddEdge(int v, int u);
   void AddEdge(Edge e);
-  void AddEdges(const std::vector<Edge>& edges);
 
   void RemoveEdge(int v, int u);
 
   const std::vector<int>& Neighbors(int v) const;
 
   int Degree(int v) const;
-  std::vector<int> Distances(const std::vector<int>& start) const;
-
-  void Print(std::ostream& out) const;
 
   std::vector<Edge> Edges() const;
 
   int MapBack(int v) const;
 
-  bool IsConnected() const;
   std::vector<std::vector<int> > Components(const std::vector<int>& separator) const;
   std::vector<int> FindComponentAndMark(int v, std::vector<char>& block) const;
 
@@ -81,7 +75,6 @@ class FGraph {
   std::vector<int> FindComponentAndMark(int v, std::vector<char>& block) const;
   bool IsConnectedOrIsolated() const;
   std::vector<std::vector<int> > Components(const std::vector<int>& separator) const;
-  uint64_t Hash() const;
   std::vector<Edge> Edges() const;
   StaticSet<int> VertexMap() const;
   std::vector<Edge> FillEdges(FBitset bs) const;
@@ -92,15 +85,12 @@ class FGraph {
   std::vector<uint64_t> Labels(const FBitset& vert) const;
   std::vector<uint64_t> RefinedLabels(const FBitset& vert) const;
   std::vector<FBitset> BitComps(FBitset vis) const;
-  std::vector<FBitset> FullComponentsWithSep(const FBitset& minsep) const;
   void ShuffleAdjList(std::mt19937& gen);
 
   int MaxCompSize(const FBitset& minsep, const FBitset& vert) const;
 
   bool IsStar(const FBitset& vs) const;
   std::vector<FBitset> StarMinsep(int sz) const;
-
-  void Print(std::ostream& out) const;
 
   std::vector<FBitset> adj_mat2_;
  private:
@@ -284,16 +274,6 @@ inline std::vector<std::vector<int> > FGraph::Components(const std::vector<int>&
   return components;
 }
 
-inline uint64_t FGraph::Hash() const {
-  PolyHash p;
-  for (int i = 0; i < n_; i++) {
-    for (int a : adj_mat2_[i]) {
-      if (a > i) { p.Add(i); p.Add(a); }
-    }
-  }
-  return p.Value();
-}
-
 inline std::vector<Edge> FGraph::Edges() const {
   std::vector<Edge> ret;
   for (int i = 0; i < n_; i++) {
@@ -457,22 +437,6 @@ inline std::vector<FBitset> FGraph::BitComps(FBitset vis) const {
   }
 }
 
-inline std::vector<FBitset> FGraph::FullComponentsWithSep(const FBitset& minsep) const {
-  FBitset vis;
-  vis.FillUpTo(n_);
-  vis.TurnOff(minsep);
-  auto comps = BitComps(vis);
-  for (int i = 0; i < (int)comps.size(); i++) {
-    if (Neighbors(comps[i]) != minsep) {
-      std::swap(comps[i], comps.back());
-      comps.pop_back();
-    }
-  }
-  assert(comps.size() >= 2);
-  for (auto& c : comps) c |= minsep;
-  return comps;
-}
-
 inline void FGraph::ShuffleAdjList(std::mt19937& gen) {
   for (int i = 0; i < n_; i++) {
     std::shuffle(adj_list_[i].begin(), adj_list_[i].end(), gen);
@@ -559,13 +523,6 @@ inline int FGraph::MaxCompSize(const FBitset& minsep, const FBitset& vert) const
     if (ret > vis.Popcount()) return ret;
   }
   return ret;
-}
-
-inline void FGraph::Print(std::ostream& out) const {
-  out << "v e: " << n_ << " " << m_ << std::endl;
-  for (int i = 0; i < n_; i++) {
-    for (int a : adj_list_[i]) out << i << " " << a << std::endl;
-  }
 }
 
 inline void SepRec(const FGraph& graph, int a, int b, FBitset neA, FBitset neB, FBitset F,

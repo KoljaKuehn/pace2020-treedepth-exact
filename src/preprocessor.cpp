@@ -67,68 +67,9 @@ vector<int> Preprocessor::SolveTree(int v, const SparseGraph& graph, const vecto
     }
   }
   assert(rank.size() > 0 && rank.back() == 1);
-  tree_lab_[v] = root;
   assert(root < (int)rank.size());
   assert(rank[root] == 1);
   return rank;
-}
-
-void Preprocessor::GetRvs(int v, int ml, const SparseGraph& graph, const vector<int>& parent, vector<vector<int>>& rvs) {
-  assert(tree_lab_[v] < (int)rvs.size());
-  if (tree_lab_[v] > ml) {
-    ml = tree_lab_[v];
-    rvs[ml].push_back(v);
-  }
-  for (int nv : graph.Neighbors(v)) {
-    if (parent[nv] == v) {
-      GetRvs(nv, ml, graph, parent, rvs);
-    }
-  }
-}
-
-pair<int, int> Preprocessor::CTPDFS(int v, int p, int de, const SparseGraph& graph, const vector<int>& parent) {
-  assert(tree_par_[v] == -1);
-  assert(tree_lab_[v] >= 0);
-  assert(tree_lab_[v] <= de);
-  pair<int, int> ml = {v, tree_lab_[v]};
-  for (int nv : graph.Neighbors(v)) {
-    if (parent[nv] == v || parent[v] == nv) {
-      if (tree_lab_[nv] <= de && nv != p) {
-        auto cml = CTPDFS(nv, v, de, graph, parent);
-        if (cml.S > ml.S) {
-          ml = cml;
-        } else if (cml.S == ml.S) {
-          ml.F = -1;
-        }
-      }
-    }
-  }
-  return ml;
-}
-
-int Preprocessor::ConstructTreePar(int v, int p, int de, const SparseGraph& graph, const vector<int>& parent) {
-  assert(tree_par_[v] == -1);
-  assert(tree_lab_[v] >= 0);
-  assert(tree_lab_[v] <= de);
-  pair<int, int> r = CTPDFS(v, -1, de, graph, parent);
-  assert(r.F >= -1 && r.S >= 0 && r.S <= de);
-  v = r.F;
-  de = r.S;
-  assert(tree_par_[v] == -1);
-  assert(tree_lab_[v] == de);
-  if (p != -1) {
-    tree_par_[v] = p;
-  }
-  for (int nv : graph.Neighbors(v)) {
-    if (parent[nv] == v || parent[v] == nv) {
-      if (tree_lab_[nv] < de) {
-        int cr = ConstructTreePar(nv, v, de-1, graph, parent);
-        assert(tree_par_[cr] == v);
-        assert(tree_lab_[cr] < tree_lab_[v]);
-      }
-    }
-  }
-  return v;
 }
 
 void Preprocessor::ParseTrees(SparseGraph& graph) {
@@ -137,11 +78,7 @@ void Preprocessor::ParseTrees(SparseGraph& graph) {
   vector<int> parent(n);
   vector<int> isols;
   queue<int> proc;
-  tree_par_.resize(n);
-  tree_lab_.resize(n);
   for (int i=0;i<n;i++) {
-    tree_par_[i] = -1;
-    tree_lab_[i] = -1;
     parent[i] = -1;
     dgs[i] = graph.Degree(i);
     if (dgs[i] == 0) {
@@ -179,24 +116,8 @@ void Preprocessor::ParseTrees(SparseGraph& graph) {
       int sz = SubtreeSize(i, graph, parent);
       if (sz >= 3) {
         auto sol = SolveTree(i, graph, parent);
-        vector<vector<int>> rvs(sol.size());
-        GetRvs(i, -1, graph, parent, rvs);
-        for (int j=0;j<(int)sol.size();j++){
-          if (sol[j] == 0) {
-            assert(rvs[j].size() == 0);
-          } else {
-            assert(rvs[j].size() > 0);
-          }
-        }
-        int iss = isols.size();
         DelTree(i, graph, parent, isols);
         int v = i;
-        vector<int> dummys;
-        vector<int> tvs;
-        vector<vector<int>> clqs;
-        for (int j = iss; j < (int)isols.size(); j++) {
-          tvs.push_back(isols[j]);
-        }
         for (int j = 0; j < (int)sol.size(); j++) {
           assert(sol[j] >= 0 && sol[j] <= 1);
           if (sol[j] == 0) continue;
@@ -204,11 +125,9 @@ void Preprocessor::ParseTrees(SparseGraph& graph) {
           for (int jj = 0; jj < j; jj++) {
             assert(isols.size() > 0);
             clq.push_back(isols.back());
-            dummys.push_back(isols.back());
             isols.pop_back();
           }
           assert((int)clq.size() == j+1);
-          clqs.push_back(clq);
           for (int a : clq) {
             for (int b : clq) {
               if (a < b) {
@@ -221,31 +140,20 @@ void Preprocessor::ParseTrees(SparseGraph& graph) {
             assert(isols.size() > 0);
             graph.AddEdge(v, isols.back());
             v = isols.back();
-            dummys.push_back(isols.back());
             isols.pop_back();
           }
         }
-        assert(tvs.size() >= dummys.size());
-        trees_.push_back({dummys, tvs, rvs, clqs});
       }
     }
   }
 }
 
 SparseGraph Preprocessor::Preprocess(SparseGraph graph) {
-  org_graph = graph;
-  n_ = graph.n();
   ParseTrees(graph);
-  SparseGraph ppg(graph.Edges());
-  vertex_map_.resize(ppg.n());
-  for (int i = 0; i < ppg.n(); i++) {
-    vertex_map_[i] = ppg.MapBack(i);
-  }
-  return ppg;
+  return SparseGraph(graph.Edges());
 }
 
 SparseGraph Preprocessor::TamakiRules(SparseGraph graph, int k) {
-  org_graph2 = graph;
   bool fo = true;
   while (fo) {
     fo = false;
@@ -283,7 +191,6 @@ SparseGraph Preprocessor::TamakiRules(SparseGraph graph, int k) {
       if (ok) {
         fo = true;
         auto nbs = graph.Neighbors(x);
-        tamaki_elim_.push_back({x, nbs});
         for (int y : nbs) {
           graph.RemoveEdge(x, y);
         }
@@ -291,145 +198,6 @@ SparseGraph Preprocessor::TamakiRules(SparseGraph graph, int k) {
       }
     }
   }
-  SparseGraph ppg(graph.Edges());
-  vertex_map2_.resize(ppg.n());
-  for (int i = 0; i < ppg.n(); i++) {
-    vertex_map2_[i] = ppg.MapBack(i);
-  }
-  return ppg;
-}
-
-vector<int> Preprocessor::Reconstruct(vector<int> colors) const {
-  if (vertex_map2_.size() > 0) {
-    assert(colors.size() == vertex_map2_.size());
-    int nn = org_graph2.n();
-    vector<int> col0(nn);
-    for (int i=0;i<nn;i++){
-      col0[i] = -1;
-    }
-    for (int i = 0; i < (int)colors.size(); i++) {
-      assert(vertex_map2_[i] >= 0 && vertex_map2_[i] < nn);
-      col0[vertex_map2_[i]] = colors[i];
-    }
-    for (int i = (int)tamaki_elim_.size() - 1; i >= 0; i--) {
-      int x = tamaki_elim_[i].F;
-      auto nbs = tamaki_elim_[i].S;
-      assert(x >= 0 && x < nn && col0[x] == -1);
-      int mic = nn;
-      for (int nx : nbs) {
-        mic = std::min(mic, col0[nx]);
-      }
-      assert(mic > 0);
-      col0[x] = mic-1;
-    }
-    for (int i=0;i<nn;i++){
-      assert(col0[i] >= 0);
-    }
-    colors = col0;
-  }
-
-  vector<int> col(n_);
-  for (int i = 0; i < n_; i++) {
-    col[i] = -1;
-  }
-  assert(colors.size() == vertex_map_.size());
-  int td = 0;
-  for (int i = 0; i < (int)colors.size(); i++) {
-    col[vertex_map_[i]] = colors[i];
-    td = max(td, colors[i]+1);
-  }
-  for (const auto& tree : trees_) {
-    int depth = tree.clqs.back().size();
-    int attach = tree.clqs[0][0];
-    int maxc = col[attach];
-    for (int v : tree.dummys) {
-      maxc = max(maxc, col[v]);
-    }
-    assert(maxc >= depth-1);
-    if (maxc >= depth) {
-      for (int v : tree.vertices) {
-        assert(tree_lab_[v] < maxc);
-        col[v] = tree_lab_[v];
-      }
-      col[attach] = maxc;
-    } else {
-      vector<int> thr(depth);
-      int mr = -1;
-      for (const auto& clq : tree.clqs) {
-        if (col[clq[0]] > mr) {
-          mr = col[clq[0]];
-          thr[mr] = 1;
-        }
-        for (int v : clq) {
-          if (col[v] > mr) {
-            thr[col[v]] = 1;
-          }
-        }
-      }
-      int fo = -1;
-      for (int i = depth-1;i>=0;i--){
-        if (tree.rvs[i].size() > 0) {
-          assert(thr[i]>0);
-        } else if (thr[i]>0) {
-          fo = i;
-          break;
-        }
-      }
-      for (int v : tree.vertices) {
-        col[v] = tree_lab_[v];
-      }
-      if (fo < tree_lab_[attach]) {
-        col[attach] = tree_lab_[attach];
-      } else {
-        col[attach] = fo;
-      }
-    }
-  }
-  for (int i=0;i<n_;i++){
-    assert(col[i] >= 0 && col[i] < td);
-  }
-  return col;
-}
-
-std::vector<int> ColToPar(const SparseGraph& graph, const std::vector<int>& col) {
-  assert((int)col.size() == graph.n());
-  int td = 0;
-  for (int i = 0; i < graph.n(); i++) {
-    assert(col[i] >= 0);
-    td = max(td, col[i]+1);
-  }
-  vector<vector<int>> vs(td);
-  vector<int> un(graph.n());
-  vector<int> par(graph.n());
-  for (int i = 0; i < graph.n(); i++) {
-    vs[col[i]].push_back(i);
-    un[i] = i;
-    par[i] = -1;
-  }
-  for (int i = 0; i < td; i++) {
-    for (int v : vs[i]) {
-      assert(col[v] == i);
-      for (int nv : graph.Neighbors(v)) {
-        if (col[nv] > i) continue;
-        assert(col[nv] < i);
-        int uu = utils::GetU(nv, un);
-        if (uu == v) continue;
-        assert(col[uu] < i);
-        assert(par[uu] == -1);
-        par[uu] = v;
-        un[uu] = v;
-      }
-    }
-  }
-  int cnt = 0;
-  for (int i = 0; i < graph.n(); i++) {
-    if (par[i] == -1) {
-      cnt++;
-    } else {
-      assert(par[i] >= 0 && par[i] < graph.n());
-    }
-  }
-  assert(cnt == 1);
-  return par;
+  return SparseGraph(graph.Edges());
 }
 } // namespace sms

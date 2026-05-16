@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <set>
 #include <cassert>
-#include <ostream>
-#include <iostream>
 #include <queue>
 
 #include "utils.hpp"
@@ -74,17 +72,8 @@ void SparseGraph::AddEdge(Edge e) {
   AddEdge(e.first, e.second);
 }
 
-void SparseGraph::AddEdges(const std::vector<Edge>& edges) {
-  for (auto& edge : edges) AddEdge(edge);
-}
-
 StaticSet<int> SparseGraph::VertexMap() const {
   return vertex_map_;
-}
-
-bool SparseGraph::IsConnected() const {
-  auto cs = Components({});
-  return (cs.size() == 1) && ((int)cs[0].size() == n_);
 }
 
 void SparseGraph::Dfs(int v, std::vector<char>& block, std::vector<int>& component) const {
@@ -149,15 +138,6 @@ void SparseGraph::RemoveEdge(int v, int u) {
     }
   }
   assert(fo == 2);
-}
-
-void SparseGraph::Print(std::ostream& out) const {
-  out<<"v e: "<<n_<<" "<<m_<<std::endl;
-  for (int i = 0; i < n_; i++) {
-    for (int a : adj_list_[i]) {
-      out<<i<<" "<<a<<std::endl;
-    }
-  }
 }
 
 bool SparseGraph::IsClique(const std::vector<int>& vs) const {
