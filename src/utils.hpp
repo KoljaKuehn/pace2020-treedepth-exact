@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <queue>
-#include <random>
 
 #include "bitset.hpp"
 
@@ -12,9 +11,6 @@ namespace sms {
 namespace utils {
 template<typename T>
 void SortAndDedup(std::vector<T>& vec);
-
-template<typename T>
-T GetRand(T a, T b, std::mt19937& gen);
 } // namespace utils
 
 class PolyHash {
@@ -36,11 +32,6 @@ class PolyHash {
 };
 
 namespace utils {
-template<typename T>
-T GetRand(T a, T b, std::mt19937& gen) {
-  return std::uniform_int_distribution<T>(a,b)(gen);
-}
-
 template<typename T>
 void SortAndDedup(std::vector<T>& vec) {
   std::sort(vec.begin(), vec.end());

@@ -110,10 +110,6 @@ const std::vector<int>& SparseGraph::Neighbors(int v) const {
   return adj_list_[v];
 }
 
-int SparseGraph::MapBack(int v) const {
-  return vertex_map_.Kth(v);
-}
-
 int SparseGraph::Degree(int v) const {
   return adj_list_[v].size();
 }

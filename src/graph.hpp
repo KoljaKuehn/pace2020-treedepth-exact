@@ -37,8 +37,6 @@ class SparseGraph {
 
   std::vector<Edge> Edges() const;
 
-  int MapBack(int v) const;
-
   std::vector<std::vector<int> > Components(const std::vector<int>& separator) const;
   std::vector<int> FindComponentAndMark(int v, std::vector<char>& block) const;
 
@@ -70,7 +68,6 @@ class FGraph {
   const std::vector<int>& Neighbors(int v) const;
   std::vector<FBitset> CompNeighsBit(const FBitset& block) const;
   void Dfs2Bit(FBitset& vis, FBitset& ne) const;
-  std::vector<FBitset> SmallMinsepsHeuristic(int sz) const;
   void Dfs(int v, std::vector<char>& block, std::vector<int>& component) const;
   std::vector<int> FindComponentAndMark(int v, std::vector<char>& block) const;
   bool IsConnectedOrIsolated() const;
@@ -199,46 +196,6 @@ inline void FGraph::Dfs2Bit(FBitset& vis, FBitset& ne) const {
       ne |= adj_mat2_[x];
     }
   }
-}
-
-inline std::vector<FBitset> FGraph::SmallMinsepsHeuristic(int sz) const {
-  assert(IsConnectedOrIsolated());
-  std::vector<FBitset> minseps;
-  FBitsetSet ff(n_, 2);
-  for (int i = 0; i < n_; i++) {
-    if (Neighbors(i).empty()) continue;
-    for (const FBitset& nbs : CompNeighsBit(adj_mat2_[i])) {
-      if (nbs.Popcount() <= sz && ff.Insert(nbs)) {
-        minseps.push_back(nbs);
-      }
-    }
-  }
-  FBitset vis, sep, ne, mask;
-  for (int i = 0; i < n_; i++) {
-    if (!Neighbors(i).empty()) mask.SetTrue(i);
-  }
-  for (int i = 0; i < (int)minseps.size(); i++) {
-    const FBitset tsep = minseps[i];
-    for (int j : tsep) {
-      FBitset block = minseps[i];
-      block |= adj_mat2_[j];
-      vis.SetNegAnd(block, mask);
-      while (vis.data_ > 0) {
-        int k = __builtin_ctzll(vis.data_);
-        sep = block;
-        ne = adj_mat2_[k];
-        Dfs2Bit(vis, ne);
-        sep.SetAnd(ne, block);
-        if (sep.Popcount() <= sz && ff.Insert(sep)) {
-          minseps.push_back(sep);
-        }
-      }
-    }
-  }
-  for (int i = 0; i < (int)minseps.size(); i++) {
-    assert(minseps[i].Popcount() <= sz);
-  }
-  return minseps;
 }
 
 inline void FGraph::Dfs(int v, std::vector<char>& block, std::vector<int>& component) const {

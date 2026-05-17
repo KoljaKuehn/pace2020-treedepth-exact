@@ -27,10 +27,6 @@ class FBitset {
   FBitset operator&(const FBitset& other) const { FBitset r; r.data_ = data_ & other.data_; return r; }
   FBitset operator~()                     const { FBitset r; r.data_ = ~data_;               return r; }
 
-  void Set(size_t i, bool v) {
-    if (v) data_ |=  (uint64_t(1) << i);
-    else   data_ &= ~(uint64_t(1) << i);
-  }
   void SetTrue(size_t i)  { data_ |=  (uint64_t(1) << i); }
   void SetFalse(size_t i) { data_ &= ~(uint64_t(1) << i); }
 
@@ -47,14 +43,11 @@ class FBitset {
   }
 
   bool Get(size_t i) const { return (data_ >> i) & 1; }
-  bool IsEmpty()     const { return data_ == 0; }
 
   void operator|=(const FBitset& rhs) { data_ |= rhs.data_; }
   void operator&=(const FBitset& rhs) { data_ &= rhs.data_; }
 
   void TurnOff  (const FBitset& rhs)                        { data_ &= ~rhs.data_; }
-  void InvertAnd(const FBitset& rhs)                        { data_ = (~data_) & rhs.data_; }
-  void SetNeg   (const FBitset& rhs)                        { data_ = ~rhs.data_; }
   void SetNegAnd(const FBitset& rhs1, const FBitset& rhs2)  { data_ = (~rhs1.data_) & rhs2.data_; }
   void SetAnd   (const FBitset& rhs1, const FBitset& rhs2)  { data_ = rhs1.data_ & rhs2.data_; }
 
@@ -115,28 +108,8 @@ class FBitsetSet {
     }
     return true;
   }
-  bool Contains(const FBitset& bitset) const {
-    size_t ind = Hash(bitset.data_, capacity_);
-    while (1) {
-      if (container_[ind] == 0)             return false;
-      if (container_[ind] == bitset.data_)  return true;
-      if (++ind == capacity_) ind = 0;
-    }
-  }
   bool Inited() const { return capacity_ > 0; }
   size_t ContainerSize() const { return container_.size(); }
-  std::vector<FBitset> Vector() const {
-    std::vector<FBitset> ret;
-    ret.reserve(elements_);
-    for (size_t i = 0; i < capacity_; i++) {
-      if (container_[i] == 0) continue;
-      FBitset bs;
-      bs.data_ = container_[i];
-      ret.push_back(bs);
-    }
-    assert(ret.size() == elements_);
-    return ret;
-  }
  private:
   size_t elements_ = 0;
   double load_factor_ = 0;
