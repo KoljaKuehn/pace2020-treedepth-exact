@@ -29,7 +29,7 @@ SparseGraph Io::ReadGraph(std::istream& in) {
   std::string input_line;
   bool pace = false;
   int n = -1;
-  int m = -1;
+  [[maybe_unused]] int m = -1;
   while (std::getline(in, input_line)) {
     assert(input_line.size() > 0);
     auto tokens = GetTokens(input_line);
@@ -44,8 +44,10 @@ SparseGraph Io::ReadGraph(std::istream& in) {
       edges.push_back({std::stoi(tokens[0]), std::stoi(tokens[1])});
     }
   }
-  SparseGraph graph(edges);
-  assert(graph.n() == n && graph.m() == m);
+  assert(pace);
+  SparseGraph graph(n);
+  for (auto [u, v] : edges) graph.AddEdge(u - 1, v - 1);
+  assert(graph.m() == m);
   return graph;
 }
 } // namespace sms
