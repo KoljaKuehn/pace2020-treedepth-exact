@@ -24,9 +24,11 @@ static bool SolveDecisionConnected(const SparseGraph& graph, int k) {
 }
 
 // Returns true iff the treedepth of graph is at most k.
-// The graph must have at most BITS (64) vertices.
+// The graph must have at most BITS (64) vertices and k must be >= 1
+// (td(G) <= 0 only holds for the empty graph, which is not a meaningful query).
 bool SolveDecision(const SparseGraph& graph, int k) {
   assert(graph.n() <= BITS);
+  assert(k >= 1);
 
   // td(G) = max over connected components, so solve each independently.
   const auto components = graph.Components({});
