@@ -3,7 +3,7 @@ project (td_exact)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_compile_options(-O3 -flto -Wall -Wextra -Wshadow -g -Wfatal-errors -Wno-sign-compare -Wno-literal-suffix -fPIC -march=native)
+add_compile_options(-flto -Wall -Wextra -Wshadow -Wfatal-errors -Wno-sign-compare -Wno-literal-suffix -march=native)
 add_library(td_exact STATIC
         graph.cpp
         io.cpp
