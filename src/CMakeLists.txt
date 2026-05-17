@@ -7,6 +7,7 @@ add_compile_options(-flto -Wall -Wextra -Wshadow -Wfatal-errors -Wno-sign-compar
 add_library(td_exact STATIC
         graph.cpp
         io.cpp
+        ms_solve.cpp
         preprocessor.cpp
         solve.cpp
 )
